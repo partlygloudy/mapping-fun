@@ -1,9 +1,12 @@
 
-// TODO clear points and roi on reset click
-// TODO if roi selected, send request on submit
-// TODO auto-gen color selection panel and update when # changes
+// TODO fix image sizing
+
+// TODO set initial gradient to nice grayscale
 // TODO different views for map selection and image edit
 // TODO button to minimize/maximize control panel
+// TODO disable/grey buttons when not ready, color when ready
+// TODO add button to return to map view
+// TODO hide irrelevant buttons on each view
 
 // Globals
 let regionSelectActive = false
@@ -12,6 +15,8 @@ let map = undefined;
 let corner1 = undefined;
 let corner2 = undefined;
 let roiJson = undefined;
+let mode = "SELECT";   // "SELECT", "EDIT"
+let colors = [];
 
 // Wait for page to finish loading
 $(document).ready(function(){
@@ -35,6 +40,7 @@ $(document).ready(function(){
     $("#select-button").click(toggleRegionSelect);
     $("#reset-button").click(handleResetClick);
     $("#submit-button").click(handleSubmitClick);
+    $("#apply-button").click(handleApplyClick);
 
     // Add handler for changing the number of bands
     $("#num-bands-input").on("blur", updateBandsPanel)
@@ -93,10 +99,148 @@ function handleResetClick() {
 }
 
 
-function handleSubmitClick() {
+async function handleSubmitClick() {
+
+    // Check if roi is selected
+    if (roiCorners.length === 2) {
+
+        // Make request to server
+        await fetch("/elevation", {
+            method: "POST",
+            body: JSON.stringify(roiJson),
+            headers: {
+                "Content-Type": "application/json"
+            }
+        }).then((response) => {
+            return response.blob();
+        }).then(loadImage).catch((error) => {
+            console.error("Error: ", error)
+        })
+
+        // Switch to editor view
+        switchToViewEdit();
+
+    }
+
 
 }
 
+
+function loadImage(data) {
+
+    // Image object
+    var img = new Image();
+
+    // Define function that gets triggerred when we give the
+    // image data to the image
+    img.onload = function() {
+
+        // Revoke object url after image load (???)
+        URL.revokeObjectURL(this.src);
+
+        // If the image is larger than the window, scale it down
+        const w = $("#editor-container-inner").width();
+        const h = $("#editor-container-inner").height();
+        const scale = Math.min(1, w / this.width, h / this.height);
+
+        // Scale both canvases to the size of the image
+        let canvasBase = document.getElementById("canvas-base");
+        let canvasStyled = document.getElementById("canvas-styled");
+        canvasBase.width = this.width * scale;
+        canvasBase.height = this.height * scale;
+        canvasStyled.width = this.width * scale;
+        canvasStyled.height = this.height * scale;
+
+        // Draw the image on both canvases
+        let ctxBase = canvasBase.getContext("2d");
+        let ctxStyled = canvasStyled.getContext("2d");
+        ctxBase.drawImage(this, 0, 0, canvasBase.width, canvasBase.height);
+        ctxStyled.drawImage(this, 0, 0, canvasStyled.width, canvasStyled.height);
+
+    }
+
+    img.src = URL.createObjectURL(data)
+
+}
+
+
+function handleApplyClick() {
+
+    // Only do anything if we're in edit mode
+    if (mode === "EDIT") {
+
+        // Get # of bands
+        let n = parseInt($("#num-bands-input").val());
+
+        // Read the color settings for each band
+        readColors(n);
+
+        // Quantize and color the image
+        quantizeImage(n);
+
+    }
+
+}
+
+
+
+function readColors(n) {
+
+    colors = [];
+
+    for (let i=1; i<=n; i++) {
+
+        // Read color value from input
+        let hexColor = $(`#color-select-${i}`).val();
+
+        // Separate R, G, and B values
+        hexColor = hexColor.replace(/^#/, '');
+
+        // Parse the R, G, B values
+        const r = parseInt(hexColor.slice(0, 2), 16);
+        const g = parseInt(hexColor.slice(2, 4), 16);
+        const b = parseInt(hexColor.slice(4, 6), 16);
+
+        colors.push([r, g, b]);
+
+    }
+
+}
+
+
+function quantizeImage(q) {
+
+    // Get the canvas and context for the base and styled images
+    let canvasBase = document.getElementById("canvas-base");
+    let canvasStyled = document.getElementById("canvas-styled");
+    let ctxBase = canvasBase.getContext('2d');
+    let ctxStyled = canvasStyled.getContext('2d');
+
+    // Get pixel data for both images
+    let dataBase = ctxBase.getImageData(0, 0, canvasBase.width, canvasBase.height);
+    let dataStyled = ctxStyled.getImageData(0, 0, canvasStyled.width, canvasStyled.height);
+    let pixelsBase = dataBase.data;
+    let pixelsStyled = dataStyled.data;
+
+    const scalar = 255.0 / q;
+
+    // Loop over image pixels
+    for(let i = 0; i < pixelsBase.length; i += 4) {
+
+        // Get quantization integer (0 - # bands) from base image
+        const qIdx = Math.min(Math.floor(pixelsBase[i] / scalar), q - 1)
+
+        // Quantize each pixel in styled image
+        pixelsStyled[i] = colors[qIdx][0];
+        pixelsStyled[i + 1] = colors[qIdx][1];
+        pixelsStyled[i + 2] = colors[qIdx][2];
+
+    }
+
+    // Put the manipulated pixels back into the canvas
+    ctxStyled.putImageData(dataStyled, 0, 0);
+
+}
 
 function handleMapClick(e) {
 
@@ -227,5 +371,19 @@ function updateBandsPanel() {
         }
 
     }
+
+}
+
+
+function switchToViewEdit() {
+
+    // Fade out interactive map
+    $("#map-container").fadeOut(500);
+
+    // Fade in editor canvas
+    $("#editor-container").fadeIn(500);
+
+    // Switch mode to "EDIT"
+    mode = "EDIT";
 
 }

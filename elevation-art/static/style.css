@@ -135,3 +135,21 @@ body {
 #reset-button:hover {
     background-color: rgb(255, 220, 220);
 }
+
+#editor-container {
+    display: none;
+}
+
+#editor-container-inner {
+    width: 100vw;
+    height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 2%;
+    box-sizing: border-box;
+}
+
+#canvas-base {
+    display: none;
+}

@@ -84,19 +84,13 @@ def home():
 def post_endpoint():
 
     # Parse request
-    #data = request.get_json()
+    feature = request.get_json()
 
     # Get roi from request
-    corners = [
-        [-85.11174994596202, 36.48572831619657],
-        [-85.11174994596202, 36.69743155259927],
-        [-85.48528510221202, 36.69743155259927],
-        [-85.48528510221202, 36.48572831619657]
-    ]
+    corners = feature["geometry"]["coordinates"][0]
 
     # Load elevation data for requested region from Earth Engine
     img_file = get_elevation_image(corners)
-
 
     # Perform operations with the data
     return send_file(img_file, mimetype='image/PNG')
