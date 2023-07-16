@@ -44,8 +44,44 @@
 </head>
 <body>
 
-    <!-- Mapbox map gets added here-->
+    <!-- Map container -->
     <div id="map-container">
+    </div>
+
+    <!-- Image viewer/editor container -->
+    <div id="editor-container">
+
+    </div>
+
+    <!-- Overlay panels -->
+    <div id="overlay-wrapper">
+
+        <div id="control-panel">
+
+            <!-- Button to turn on roi selection -->
+            <div class="control-button" id="select-button">Select Region</div>
+
+            <!-- Input for setting # of bands -->
+            <div id="num-bands-section">
+                <label class="control-panel-label" for="num-bands-input"># of bands:</label>
+                <input type="number" id="num-bands-input" min="0" max="100" value="10">
+            </div>
+
+            <!-- Band color selectors -->
+            <!-- Child elements are auto-generated -->
+            <div id="color-selection-wrapper"></div>
+
+            <!-- Button to apply new band and color settings -->
+            <div class="control-button" id="apply-button">Apply Settings</div>
+
+            <!-- Button to apply new band and color settings -->
+            <div class="control-button" id="submit-button">Submit</div>
+
+            <!-- Button to apply new band and color settings -->
+            <div class="control-button" id="reset-button">Reset Map</div>
+
+        </div>
+
     </div>
 
 </body>
