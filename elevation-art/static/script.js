@@ -41,6 +41,7 @@ $(document).ready(function(){
     $("#reset-button").click(handleResetClick);
     $("#submit-button").click(handleSubmitClick);
     $("#apply-button").click(handleApplyClick);
+    $("#download-button").click(handleDownloadClick);
 
     // Add handler for changing the number of bands
     $("#num-bands-input").on("blur", updateBandsPanel)
@@ -385,5 +386,25 @@ function switchToViewEdit() {
 
     // Switch mode to "EDIT"
     mode = "EDIT";
+
+}
+
+
+function handleDownloadClick() {
+
+    // Get the canvas with the styled image
+    let canvas = document.getElementById("canvas-styled");
+
+    // Create a download link
+    let link = document.createElement("a");
+    link.href = canvas.toDataURL("image/png");
+    link.download = 'elevation.png';
+
+    // Add to the page and simulate a click
+    document.body.appendChild(link);
+    link.click();
+
+    // Remove from the page
+    document.body.removeChild(link);
 
 }

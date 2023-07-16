@@ -1,6 +1,7 @@
 
 # Import packages
 from flask import Flask, request, jsonify, send_file
+from scipy.ndimage import gaussian_filter
 import ee
 import numpy as np
 import urllib.request
@@ -34,7 +35,7 @@ def get_elevation_image(corners):
     roi = ee.Geometry.Polygon(corners)
 
     # Load elevation data and clip to roi
-    elevation_raw = ee.Image('USGS/SRTMGL1_003').select('elevation')
+    elevation_raw = ee.Image('USGS/3DEP/10m').select('elevation')
     elevation_raw = elevation_raw.clip(roi)
 
     # Find min and max elevation
@@ -46,11 +47,21 @@ def get_elevation_image(corners):
     elevation_scaled = elevation_raw.unitScale(e_min, e_max)
 
     # Get a download URL for the image
-    path = elevation_scaled.getDownloadUrl({
-        "name": "image",
-        "scale": 30,
-        "format": "NPY"
-    })
+    scale = 10
+    success = False
+
+    while not success:
+
+        try:
+            path = elevation_scaled.getDownloadUrl({
+                "name": "image",
+                "scale": scale,
+                "crs": "EPSG:3857",
+                "format": "NPY"
+            })
+            success = True
+        except:
+            scale += 10
 
     # Download zipfile from download url
     urllib.request.urlretrieve(path, "elevation_data.npy")
@@ -58,6 +69,9 @@ def get_elevation_image(corners):
     # Read downloaded numpy array
     data = np.load("elevation_data.npy")
     data = data["elevation"]
+
+    # Apply gaussian blur to the image for smoother edges in quanitized images
+    data = gaussian_filter(data, sigma=3)
 
     # Convert numpy array to PIL Image, then to PNG file
     # Mode = L since it's a 2D grayscale array
